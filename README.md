@@ -40,9 +40,9 @@ python srt_translator.py <输入文件> <输出文件> [选项]
 
 **重要选项：**
 - `--api-key`: API密钥（必需，除非代码中设置了默认值）
-- `--batch-size`: 每次翻译的字幕条数，建议30（平衡速度和质量）
-- `--context-size`: 上下文大小，建议3（提供前后文提升翻译连贯性）
-- `--threads`: 并发线程数，建议10（根据API限制调整）
+- `--batch-size`: 每次翻译的字幕条数，建议30（越大翻译质量越好，速度也越快）
+- `--context-size`: 上下文大小，建议3-5（越大翻译质量越好，提供更多前后文信息）
+- `--threads`: 并发线程数，建议2-10（越大速度越快，但不建议超过10）
 
 **API选择：**
 - `--api deepseek`: 使用DeepSeek API
@@ -92,18 +92,18 @@ python srt_translator.py test.srt test_cn.srt \
 **4. 高质量翻译（速度较慢）：**
 ```bash
 python srt_translator.py input.srt output.srt \
-  --batch-size 5 \
+  --batch-size 30 \
   --context-size 5 \
-  --threads 1 \
+  --threads 2 \
   --api-key sk-你的密钥
 ```
 
-**5. 高速翻译（质量略降）：**
+**5. 高速翻译（适中质量）：**
 ```bash
 python srt_translator.py input.srt output.srt \
   --batch-size 50 \
-  --context-size 2 \
-  --threads 15 \
+  --context-size 3 \
+  --threads 10 \
   --api-key sk-你的密钥
 ```
 
@@ -172,7 +172,7 @@ python build_exe.py
 A: 增加`--threads`和`--batch-size`参数，注意API调用限制。
 
 **Q: 翻译质量不好？**
-A: 减小`--batch-size`，增加`--context-size`，使用术语库。
+A: 增大`--batch-size`和`--context-size`，使用术语库。
 
 **Q: 断点续接失败？**
 A: 确保使用相同的输入输出路径，检查进度文件完整性。
