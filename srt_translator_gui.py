@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# 版本号
+VERSION = "0.1.2"
+
 import os
 import sys
 import json
@@ -16,7 +19,7 @@ import concurrent.futures
 import re
 
 # 导入原始翻译器和检查器模块
-from srt_translator import SRTTranslator, TranslationAPI, TerminologyManager, API_ENDPOINTS, DEFAULT_API_KEY, DEFAULT_API_TYPE, DEFAULT_MODELS
+from srt_translator import SRTTranslator, TranslationAPI, API_ENDPOINTS, DEFAULT_API_KEY, DEFAULT_API_TYPE, DEFAULT_MODELS
 import srt_checker
 
 # 设置日志
@@ -143,8 +146,7 @@ class ConfigManager:
             "context_size": 2,
             "threads": 1,
             "last_input_dir": "",
-            "last_output_dir": "",
-            "terminology_file": "terminology.json"
+            "last_output_dir": ""
         }
         self.config = self.load_config()
     
@@ -267,8 +269,6 @@ class TranslationTab(ctk.CTkFrame):
         self.batch_size_var = IntVar(value=self.config["batch_size"])
         self.context_size_var = IntVar(value=self.config["context_size"])
         self.threads_var = IntVar(value=self.config["threads"])
-        # 术语库功能在GUI中已移除，但保留变量用于兼容性
-        self.terminology_file_var = StringVar(value="terminology.json")
         self.use_range_var = BooleanVar(value=False)
         self.start_num_var = StringVar(value="")
         self.end_num_var = StringVar(value="")
@@ -875,7 +875,6 @@ class TranslationTab(ctk.CTkFrame):
         batch_size = int(self.batch_size_var.get())
         context_size = int(self.context_size_var.get())
         threads = int(self.threads_var.get())
-        terminology_file = "terminology.json"  # 使用默认术语库文件
         resume = self.resume_var.get()
         
         # 范围翻译参数
@@ -906,8 +905,6 @@ class TranslationTab(ctk.CTkFrame):
         
         # 创建翻译器实例，使用custom API类型
         self.translator = SRTTranslator("custom", api_key, batch_size, context_size, threads, model)
-        if terminology_file:
-            self.translator.terminology_manager.terminology_file = terminology_file
         
         # 启动翻译线程
         self.translation_thread = threading.Thread(
@@ -930,7 +927,6 @@ class TranslationTab(ctk.CTkFrame):
             self.config["batch_size"] = int(self.batch_size_var.get())
             self.config["context_size"] = int(self.context_size_var.get())
             self.config["threads"] = int(self.threads_var.get())
-            self.config["terminology_file"] = "terminology.json"  # 使用默认术语库文件
             
             # 静默保存到配置文件
             self.config_manager.update_config(self.config)
@@ -948,7 +944,6 @@ class TranslationTab(ctk.CTkFrame):
             self.config["batch_size"] = int(self.batch_size_var.get())
             self.config["context_size"] = int(self.context_size_var.get())
             self.config["threads"] = int(self.threads_var.get())
-            self.config["terminology_file"] = "terminology.json"  # 使用默认术语库文件
             
             # 保存到配置文件
             self.config_manager.update_config(self.config)
@@ -1442,7 +1437,7 @@ class SRTTranslatorApp(ctk.CTk):
         self.config_manager = ConfigManager()
         
         # 设置窗口
-        self.title("SRT字幕翻译工具")
+        self.title(f"SRT字幕翻译工具 v{VERSION}")
         self.geometry("1000x700")
         self.minsize(800, 600)
         

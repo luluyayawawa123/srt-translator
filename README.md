@@ -1,4 +1,4 @@
-# SRT字幕翻译工具
+# SRT字幕翻译工具 v0.1.2
 
 基于AI大语言模型的SRT字幕翻译工具，支持**断点续接**、**多线程并发**、**批量处理**等特性。提供现代化GUI界面（仅Windows）和跨平台命令行工具。
 
@@ -55,9 +55,6 @@ python srt_translator.py <输入文件> <输出文件> [选项]
 - `--start`: 起始字幕编号（只翻译指定范围）
 - `--end`: 结束字幕编号（与--start配合使用）
 - `--no-resume`: 禁用断点续接，重新开始翻译
-
-**其他选项：**
-- `--terminology-file`: 自定义术语库文件路径（默认terminology.json）
 
 #### 使用示例
 
@@ -158,14 +155,12 @@ python build_exe.py
 ├── build_exe.py               # 打包脚本
 ├── check_build_env.py         # 环境检查
 ├── run_gui.bat                # GUI启动脚本
-├── requirements.txt           # 依赖列表
-└── terminology.json           # 术语库文件
+└── requirements.txt           # 依赖列表
 ```
 
 ### 核心特性
 - **断点续接**: 翻译中断后自动从断点继续
 - **多线程**: 支持并发翻译，显著提升速度
-- **术语库**: 保持专业术语翻译一致性（`terminology.json`）
 - **上下文感知**: 提供前后文提升翻译质量
 - **格式保护**: 完整保留SRT时间码和格式
 - **OpenAI兼容**: 支持所有OpenAI Chat Completions API格式的服务
@@ -176,7 +171,7 @@ python build_exe.py
 A: 增加`--threads`和`--batch-size`参数，注意API调用限制。
 
 **Q: 翻译质量不好？**
-A: 增大`--batch-size`和`--context-size`，使用术语库。
+A: 增大`--batch-size`和`--context-size`，提供更多上下文信息。
 
 **Q: 断点续接失败？**
 A: 确保使用相同的输入输出路径，检查进度文件完整性。
@@ -199,3 +194,10 @@ A: 先用校验工具确认缺失范围，然后用`--start/--end`单独翻译�
 ---
 
 💡 **提示**: 首次使用建议先用小范围测试：`--start 1 --end 50`
+
+## 📝 更新日志
+
+### v0.1.2 (2024-01-13)
+- 🗑️ 移除术语库功能（使用率低，功能鸡肋）
+- 📍 添加版本号显示在GUI标题栏
+- 🔧 代码优化和清理

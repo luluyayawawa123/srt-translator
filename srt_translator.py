@@ -89,56 +89,6 @@ class SRTEntry:
     def __repr__(self) -> str:
         return f"SRTEntry({self.number}, {self.start_time}, {self.end_time}, {self.content})"
 
-class TerminologyManager:
-    """管理专业术语、人名、地名等的翻译一致性"""
-    def __init__(self, terminology_file: Optional[str] = None):
-        self.terms = {}
-        self.terminology_file = terminology_file or "terminology.json"
-        self.lock = threading.RLock()  # 添加线程锁以保证线程安全
-        self.load_terminology()
-    
-    def load_terminology(self) -> None:
-        """从文件加载术语库"""
-        with self.lock:
-            if os.path.exists(self.terminology_file):
-                try:
-                    with open(self.terminology_file, 'r', encoding='utf-8') as f:
-                        self.terms = json.load(f)
-                    logger.info(f"已从术语库文件加载 {len(self.terms)} 个术语")
-                except Exception as e:
-                    logger.error(f"加载术语库文件出错: {e}")
-                    self.terms = {}
-    
-    def save_terminology(self) -> None:
-        """保存术语库到文件"""
-        with self.lock:
-            try:
-                with open(self.terminology_file, 'w', encoding='utf-8') as f:
-                    json.dump(self.terms, f, ensure_ascii=False, indent=2)
-                logger.debug(f"已保存 {len(self.terms)} 个术语到术语库文件")
-            except Exception as e:
-                logger.error(f"保存术语库文件出错: {e}")
-    
-    def add_term(self, original: str, translation: str) -> None:
-        """添加术语及其翻译"""
-        with self.lock:
-            original = original.lower()
-            if original not in self.terms:
-                self.terms[original] = translation
-                logger.debug(f"添加术语: {original} -> {translation}")
-                self.save_terminology()
-    
-    def get_translation(self, term: str) -> Optional[str]:
-        """获取术语的翻译"""
-        with self.lock:
-            return self.terms.get(term.lower())
-    
-    def extract_potential_terms(self, text: str) -> List[str]:
-        """从文本中提取潜在的术语"""
-        # 简单的实现：提取首字母大写的词组（可能是专有名词）
-        potential_terms = re.findall(r'\b([A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)*)\b', text)
-        return potential_terms
-
 class ProgressManager:
     """管理翻译进度，支持断点续接"""
     def __init__(self, output_base: str, total_batches: int = 0, range_tag: str = ""):
@@ -359,7 +309,6 @@ class SRTTranslator:
     """SRT字幕翻译器"""
     def __init__(self, api_type: str, api_key: str, batch_size: int = 5, context_size: int = 2, max_workers: int = 1, model_name: str = None):
         self.translation_api = TranslationAPI(api_type, api_key, model_name)
-        self.terminology_manager = TerminologyManager()
         self.batch_size = batch_size  # 每批处理的字幕条数
         self.context_size = context_size  # 上下文大小（每侧的条目数）
         self.max_workers = max_workers  # 最大并发工作线程数
@@ -516,13 +465,6 @@ class SRTTranslator:
             translated_entries = []
             for i, entry in enumerate(batch_entries):
                 translated_content = translated_contents[i].strip()
-                
-                # 从翻译后的内容中提取潜在的术语
-                original_terms = self.terminology_manager.extract_potential_terms(entry.content)
-                for term in original_terms:
-                    if term not in self.terminology_manager.terms and term in translated_content:
-                        # 记录新术语及其翻译（简化处理）
-                        self.terminology_manager.add_term(term, translated_content)
                 
                 translated_entries.append(
                     SRTEntry(entry.number, entry.start_time, entry.end_time, translated_content)
@@ -690,9 +632,6 @@ class SRTTranslator:
             
             logger.info(f"翻译完成。输出在 {actual_output_file}")
             
-            # 保存术语库
-            self.terminology_manager.save_terminology()
-            
         except Exception as e:
             logger.error(f"翻译SRT文件出错: {e}")
             raise
@@ -831,7 +770,6 @@ def main():
     parser.add_argument("--batch-size", type=int, default=5, help="每批处理的字幕条数")
     parser.add_argument("--context-size", type=int, default=2, help="上下文条目数量")
     parser.add_argument("--no-resume", action="store_true", help="不使用断点续接，重新开始翻译")
-    parser.add_argument("--terminology-file", help="术语库文件路径")
     parser.add_argument("--start", type=int, help="开始翻译的字幕编号")
     parser.add_argument("--end", type=int, help="结束翻译的字幕编号")
     parser.add_argument("--threads", type=int, default=1, help="并行处理的线程数 (大于1启用多线程)")
@@ -880,8 +818,6 @@ def main():
                 DEFAULT_MODELS["custom"] = args.model
         
         translator = SRTTranslator(args.api, args.api_key, args.batch_size, args.context_size, args.threads, args.model)
-        if args.terminology_file:
-            translator.terminology_manager.terminology_file = args.terminology_file
         
         translator.translate_srt_file(args.input_file, args.output_file, 
                                       resume=not args.no_resume,
