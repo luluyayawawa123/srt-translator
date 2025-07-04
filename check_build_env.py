@@ -128,7 +128,7 @@ def check_source_files():
     ]
     
     optional_files = [
-        "terminology.json",
+
         "srt_icon.ico"
     ]
     

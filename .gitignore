@@ -45,5 +45,6 @@ Thumbs.db
 SRT翻译工具/
 .历史文件备份（请忽略）/
 
-# Config with sensitive data (optional)
-# srt_translator_gui_config.json 
+# Config with sensitive data
+srt_translator_gui_config.json
+prompts_config.json 

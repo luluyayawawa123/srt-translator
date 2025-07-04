@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # 版本号
-VERSION = "0.1.2"
+VERSION = "0.1.4"
 
 import os
 import sys
@@ -146,7 +146,8 @@ class ConfigManager:
             "context_size": 2,
             "threads": 1,
             "last_input_dir": "",
-            "last_output_dir": ""
+            "last_output_dir": "",
+            "current_prompt": ""
         }
         self.config = self.load_config()
     
@@ -252,13 +253,18 @@ class GUILogger:
 
 class TranslationTab(ctk.CTkFrame):
     """翻译选项卡，包含翻译设置和控制"""
-    def __init__(self, master, config_manager, **kwargs):
+    def __init__(self, master, config_manager, main_app=None, **kwargs):
         super().__init__(master, **kwargs)
         self.config_manager = config_manager
         self.config = config_manager.get_config()
+        self.main_app = main_app  # 添加主应用引用
         self.translator = None
         self.translation_thread = None
         self.cancel_event = threading.Event()
+        
+        # 初始化提示词管理器
+        from srt_translator import PromptManager
+        self.prompt_manager = PromptManager()
         
         # 创建控件变量
         self.input_file_var = StringVar(value="")
@@ -274,6 +280,13 @@ class TranslationTab(ctk.CTkFrame):
         self.end_num_var = StringVar(value="")
         self.resume_var = BooleanVar(value=True)
         self.show_api_key_var = BooleanVar(value=False)
+        
+        # 提示词相关变量
+        config_prompt = self.config.get("current_prompt", "")
+        if config_prompt:
+            self.prompt_manager.set_current_prompt(config_prompt)
+        current_prompt_name = self.prompt_manager.get_current_prompt_name()
+        self.current_prompt_var = StringVar(value=current_prompt_name if current_prompt_name else "无")
         
         # 设置布局
         self.setup_ui()
@@ -379,9 +392,37 @@ class TranslationTab(ctk.CTkFrame):
         ToolTip(threads_label, "并发翻译的线程数\n增加线程数可以加快翻译速度，但会增加API调用频率\n建议值：1-10，根据API限制调整")
         ToolTip(threads_entry, "并发翻译的线程数\n增加线程数可以加快翻译速度，但会增加API调用频率\n建议值：1-10，根据API限制调整")
         
+        # 提示词设置框架
+        prompt_frame = ctk.CTkFrame(settings_frame)
+        prompt_frame.grid(row=3, column=0, padx=10, pady=(0, 5), sticky="ew")
+        prompt_frame.grid_columnconfigure(1, weight=1)
+        
+        # 提示词选择
+        prompt_label = ctk.CTkLabel(prompt_frame, text="翻译提示词:")
+        prompt_label.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        
+        prompt_select_frame = ctk.CTkFrame(prompt_frame, fg_color="transparent")
+        prompt_select_frame.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+        prompt_select_frame.grid_columnconfigure(0, weight=1)
+        
+        self.prompt_combobox = ctk.CTkComboBox(prompt_select_frame, 
+                                               values=["无"] + self.prompt_manager.get_prompt_names(),
+                                               variable=self.current_prompt_var,
+                                               command=self.on_prompt_selection_change)
+        self.prompt_combobox.grid(row=0, column=0, padx=(0, 5), sticky="ew")
+        
+        prompt_edit_button = ctk.CTkButton(prompt_select_frame, text="编辑", width=50, 
+                                          command=self.open_prompt_editor)
+        prompt_edit_button.grid(row=0, column=1)
+        
+        # 添加tooltip
+        ToolTip(prompt_label, "选择翻译提示词来指导AI如何翻译\n不同类型的内容使用不同的提示词可以获得更好的翻译效果")
+        ToolTip(self.prompt_combobox, "选择预设提示词或自定义提示词\n选择'无'将使用默认翻译设置")
+        ToolTip(prompt_edit_button, "打开提示词编辑器\n可以编辑现有提示词或创建新的自定义提示词")
+        
         # 范围选择框架
         range_frame = ctk.CTkFrame(settings_frame)
-        range_frame.grid(row=3, column=0, padx=10, pady=(0, 5), sticky="ew")
+        range_frame.grid(row=4, column=0, padx=10, pady=(0, 5), sticky="ew")
         
         # 使用范围翻译复选框
         use_range_checkbox = ctk.CTkCheckBox(range_frame, text="翻译范围（可选）", variable=self.use_range_var, 
@@ -421,7 +462,7 @@ class TranslationTab(ctk.CTkFrame):
         save_settings_button = ctk.CTkButton(settings_frame, text="保存设置", 
                                          command=self.update_config,
                                          fg_color="#17a2b8", hover_color="#138496")
-        save_settings_button.grid(row=4, column=0, padx=10, pady=(10, 5), sticky="ew")
+        save_settings_button.grid(row=5, column=0, padx=10, pady=(10, 5), sticky="ew")
         
         # 添加tooltip
         ToolTip(save_settings_button, "保存当前设置到配置文件\n下次启动时会自动加载")
@@ -556,6 +597,29 @@ class TranslationTab(ctk.CTkFrame):
         state = "normal" if self.use_range_var.get() else "disabled"
         self.start_entry.configure(state=state)
         self.end_entry.configure(state=state)
+    
+    def on_prompt_selection_change(self, selected_prompt):
+        """提示词选择变化时的处理"""
+        if selected_prompt == "无":
+            self.prompt_manager.set_current_prompt("")
+        else:
+            self.prompt_manager.set_current_prompt(selected_prompt)
+    
+    def open_prompt_editor(self):
+        """打开提示词编辑器"""
+        editor = PromptEditorWindow(self, self.prompt_manager)
+        editor.wait_window()  # 等待编辑器窗口关闭
+        
+        # 刷新下拉框选项
+        prompt_names = self.prompt_manager.get_prompt_names()
+        self.prompt_combobox.configure(values=["无"] + prompt_names)
+        
+        # 更新当前选择
+        current_name = self.prompt_manager.get_current_prompt_name()
+        if current_name:
+            self.current_prompt_var.set(current_name)
+        else:
+            self.current_prompt_var.set("无")
     
     def browse_file(self, var, title, filetypes, save=False):
         """浏览选择文件"""
@@ -903,8 +967,11 @@ class TranslationTab(ctk.CTkFrame):
         self.log_text.insert_text(f"开始新的翻译任务 - {time.strftime('%Y-%m-%d %H:%M:%S')}")
         self.log_text.insert_text("="*50)
         
+        # 获取当前选中的提示词
+        current_prompt = self.prompt_manager.get_current_prompt()
+        
         # 创建翻译器实例，使用custom API类型
-        self.translator = SRTTranslator("custom", api_key, batch_size, context_size, threads, model)
+        self.translator = SRTTranslator("custom", api_key, batch_size, context_size, threads, model, current_prompt)
         
         # 启动翻译线程
         self.translation_thread = threading.Thread(
@@ -927,6 +994,7 @@ class TranslationTab(ctk.CTkFrame):
             self.config["batch_size"] = int(self.batch_size_var.get())
             self.config["context_size"] = int(self.context_size_var.get())
             self.config["threads"] = int(self.threads_var.get())
+            self.config["current_prompt"] = self.prompt_manager.get_current_prompt_name()
             
             # 静默保存到配置文件
             self.config_manager.update_config(self.config)
@@ -944,6 +1012,7 @@ class TranslationTab(ctk.CTkFrame):
             self.config["batch_size"] = int(self.batch_size_var.get())
             self.config["context_size"] = int(self.context_size_var.get())
             self.config["threads"] = int(self.threads_var.get())
+            self.config["current_prompt"] = self.prompt_manager.get_current_prompt_name()
             
             # 保存到配置文件
             self.config_manager.update_config(self.config)
@@ -1009,6 +1078,7 @@ class TranslationTab(ctk.CTkFrame):
                             f"📁 输出文件：{os.path.basename(output_file)}\n"
                             f"📝 翻译条目：{subtitle_count} 条字幕\n"
                             f"📍 保存位置：{os.path.dirname(output_file)}\n\n"
+                            f"✅ 已自动填充字幕校验器文件路径\n"
                             f"✨ 可以开始享受翻译后的字幕了！"
                         )
                     except:
@@ -1017,8 +1087,13 @@ class TranslationTab(ctk.CTkFrame):
                             f"🎉 翻译成功完成！\n\n"
                             f"📁 输出文件：{os.path.basename(output_file)}\n"
                             f"📍 保存位置：{os.path.dirname(output_file)}\n\n"
+                            f"✅ 已自动填充字幕校验器文件路径\n"
                             f"✨ 可以开始享受翻译后的字幕了！"
                         )
+                    
+                    # 自动填充校验器文件路径
+                    if self.main_app:
+                        self.after(0, lambda: self.main_app.set_checker_files(input_file, output_file))
                     
                     self.after(0, lambda: messagebox.showinfo("翻译完成", success_message))
                 else:
@@ -1465,8 +1540,8 @@ class SRTTranslatorApp(ctk.CTk):
         self.tabview.tab("字幕校验").grid_columnconfigure(0, weight=1)
         self.tabview.tab("字幕校验").grid_rowconfigure(0, weight=1)
         
-        # 创建翻译选项卡
-        self.translation_tab = TranslationTab(self.tabview.tab("字幕翻译"), self.config_manager)
+        # 创建翻译选项卡（传递主应用引用）
+        self.translation_tab = TranslationTab(self.tabview.tab("字幕翻译"), self.config_manager, self)
         self.translation_tab.grid(row=0, column=0, sticky="nsew")
         
         # 创建检查选项卡
@@ -1476,6 +1551,19 @@ class SRTTranslatorApp(ctk.CTk):
         # 添加SRT翻译器模块对象上的cancel_event参数支持
         # 这个补丁修改可以不修改原始翻译器代码
         self._patch_translator_for_cancel()
+    
+    def set_checker_files(self, source_file, translated_file):
+        """设置校验器的文件路径，在翻译成功后调用"""
+        try:
+            # 设置源文件路径
+            self.checker_tab.source_file_var.set(source_file)
+            
+            # 设置翻译文件路径
+            self.checker_tab.translated_file_var.set(translated_file)
+            
+            logger.info(f"已自动填充校验器文件路径: 源文件={os.path.basename(source_file)}, 翻译文件={os.path.basename(translated_file)}")
+        except Exception as e:
+            logger.error(f"设置校验器文件路径时出错: {e}")
     
     def _patch_translator_for_cancel(self):
         """为原始翻译器模块添加取消支持"""
@@ -1623,6 +1711,206 @@ class SRTTranslatorApp(ctk.CTk):
         
         # 替换原始方法
         SRTTranslator.translate_srt_file = patched_translate_srt_file
+
+
+class PromptEditorWindow(ctk.CTkToplevel):
+    """提示词编辑器窗口"""
+    def __init__(self, parent, prompt_manager):
+        super().__init__(parent)
+        self.prompt_manager = prompt_manager
+        
+        # 设置窗口属性
+        self.title("提示词编辑器")
+        self.geometry("700x500")
+        self.minsize(600, 400)  # 设置最小尺寸
+        self.resizable(True, True)
+        
+        # 设置窗口为模态
+        self.transient(parent)
+        self.grab_set()
+        
+        # 居中显示
+        self.center_window()
+        
+        # 创建控件变量
+        self.prompt_names = self.prompt_manager.get_prompt_names()
+        self.current_selection = StringVar()
+        self.prompt_content = StringVar()
+        
+        # 设置界面
+        self.setup_ui()
+        
+        # 初始化选择
+        current_name = self.prompt_manager.get_current_prompt_name()
+        if current_name and current_name in self.prompt_names:
+            self.current_selection.set(current_name)
+            self.on_prompt_select()
+        elif self.prompt_names:
+            self.current_selection.set(self.prompt_names[0])
+            self.on_prompt_select()
+    
+    def center_window(self):
+        """将窗口居中显示，确保不超出屏幕范围"""
+        self.update_idletasks()
+        
+        # 获取窗口尺寸
+        width = self.winfo_width()
+        height = self.winfo_height()
+        
+        # 获取屏幕尺寸
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        
+        # 计算居中位置
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+        
+        # 确保窗口不会超出屏幕边界
+        x = max(0, min(x, screen_width - width))
+        y = max(0, min(y, screen_height - height))
+        
+        # 如果窗口仍然太大，调整尺寸
+        if width > screen_width * 0.9:  # 不超过屏幕宽度的90%
+            width = int(screen_width * 0.9)
+        if height > screen_height * 0.8:  # 不超过屏幕高度的80%
+            height = int(screen_height * 0.8)
+            
+        self.geometry(f'{width}x{height}+{x}+{y}')
+    
+    def setup_ui(self):
+        """设置用户界面"""
+        # 主容器
+        main_frame = ctk.CTkFrame(self)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        main_frame.grid_columnconfigure(1, weight=1)
+        main_frame.grid_rowconfigure(1, weight=1)
+        
+        # 左侧提示词列表
+        list_frame = ctk.CTkFrame(main_frame)
+        list_frame.grid(row=0, column=0, rowspan=2, padx=(0, 10), pady=0, sticky="nsew")
+        list_frame.grid_rowconfigure(1, weight=1)
+        
+        ctk.CTkLabel(list_frame, text="提示词列表", font=ctk.CTkFont(size=16, weight="bold")).grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        
+        # 提示词选择框
+        self.prompt_listbox = ctk.CTkComboBox(list_frame, 
+                                              values=self.prompt_names,
+                                              variable=self.current_selection,
+                                              command=self.on_prompt_select)
+        self.prompt_listbox.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="ew")
+        
+        # 按钮区域
+        buttons_frame = ctk.CTkFrame(list_frame)
+        buttons_frame.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="ew")
+        buttons_frame.grid_columnconfigure((0, 1), weight=1)
+        
+        add_button = ctk.CTkButton(buttons_frame, text="新建", width=80, command=self.add_prompt)
+        add_button.grid(row=0, column=0, padx=(0, 5), pady=5, sticky="ew")
+        
+        delete_button = ctk.CTkButton(buttons_frame, text="删除", width=80, command=self.delete_prompt, fg_color="#dc3545", hover_color="#c82333")
+        delete_button.grid(row=0, column=1, padx=(5, 0), pady=5, sticky="ew")
+        
+        # 右侧编辑区域
+        edit_frame = ctk.CTkFrame(main_frame)
+        edit_frame.grid(row=0, column=1, columnspan=1, padx=0, pady=0, sticky="nsew")
+        edit_frame.grid_columnconfigure(0, weight=1)
+        edit_frame.grid_rowconfigure(1, weight=1)
+        
+        ctk.CTkLabel(edit_frame, text="提示词内容", font=ctk.CTkFont(size=16, weight="bold")).grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        
+        # 文本编辑区
+        self.text_editor = ctk.CTkTextbox(edit_frame, wrap="word", height=300)
+        self.text_editor.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
+        
+        # 底部按钮区域
+        bottom_frame = ctk.CTkFrame(main_frame)
+        bottom_frame.grid(row=2, column=1, padx=0, pady=(10, 0), sticky="ew")
+        bottom_frame.grid_columnconfigure((0, 1, 2), weight=1)
+        
+        save_button = ctk.CTkButton(bottom_frame, text="保存", command=self.save_prompt, fg_color="#28a745", hover_color="#218838")
+        save_button.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+        
+        reset_button = ctk.CTkButton(bottom_frame, text="重置", command=self.reset_prompt, fg_color="#ffc107", hover_color="#e0a800")
+        reset_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+        
+        close_button = ctk.CTkButton(bottom_frame, text="关闭", command=self.destroy, fg_color="#6c757d", hover_color="#5a6268")
+        close_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
+    
+    def on_prompt_select(self, *args):
+        """选择提示词时的处理"""
+        selected_name = self.current_selection.get()
+        if selected_name:
+            content = self.prompt_manager.get_prompt(selected_name)
+            self.text_editor.delete("1.0", "end")
+            self.text_editor.insert("1.0", content)
+    
+    def add_prompt(self):
+        """添加新提示词"""
+        dialog = ctk.CTkInputDialog(text="请输入新提示词的名称:", title="新建提示词")
+        name = dialog.get_input()
+        
+        if name and name.strip():
+            name = name.strip()
+            if self.prompt_manager.add_custom_prompt(name, "请在此输入提示词内容..."):
+                # 刷新列表
+                self.prompt_names = self.prompt_manager.get_prompt_names()
+                self.prompt_listbox.configure(values=self.prompt_names)
+                self.current_selection.set(name)
+                self.on_prompt_select()
+                messagebox.showinfo("成功", f"提示词 '{name}' 已创建")
+            else:
+                messagebox.showerror("错误", f"提示词 '{name}' 已存在")
+    
+    def delete_prompt(self):
+        """删除选中的提示词"""
+        selected_name = self.current_selection.get()
+        if not selected_name:
+            messagebox.showwarning("警告", "请先选择要删除的提示词")
+            return
+        
+        if self.prompt_manager.is_default_prompt(selected_name):
+            messagebox.showwarning("警告", "不能删除预设提示词")
+            return
+        
+        if messagebox.askyesno("确认删除", f"确定要删除提示词 '{selected_name}' 吗？"):
+            if self.prompt_manager.delete_custom_prompt(selected_name):
+                # 刷新列表
+                self.prompt_names = self.prompt_manager.get_prompt_names()
+                self.prompt_listbox.configure(values=self.prompt_names)
+                
+                # 选择第一个可用的提示词
+                if self.prompt_names:
+                    self.current_selection.set(self.prompt_names[0])
+                    self.on_prompt_select()
+                else:
+                    self.text_editor.delete("1.0", "end")
+                
+                messagebox.showinfo("成功", f"提示词 '{selected_name}' 已删除")
+            else:
+                messagebox.showerror("错误", "删除失败")
+    
+    def save_prompt(self):
+        """保存当前编辑的提示词"""
+        selected_name = self.current_selection.get()
+        if not selected_name:
+            messagebox.showwarning("警告", "请先选择要保存的提示词")
+            return
+        
+        content = self.text_editor.get("1.0", "end-1c")
+        if not content.strip():
+            messagebox.showwarning("警告", "提示词内容不能为空")
+            return
+        
+        self.prompt_manager.update_prompt(selected_name, content.strip())
+        messagebox.showinfo("成功", f"提示词 '{selected_name}' 已保存")
+    
+    def reset_prompt(self):
+        """重置当前提示词内容"""
+        selected_name = self.current_selection.get()
+        if selected_name:
+            if messagebox.askyesno("确认重置", "确定要重置当前提示词内容吗？未保存的修改将丢失。"):
+                self.on_prompt_select()
 
 
 def main():

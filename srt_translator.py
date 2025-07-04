@@ -71,6 +71,131 @@ DEFAULT_MODELS = {
     "custom": None  # 添加自定义模型支持
 }  # 各API类型对应的默认模型名称
 
+class PromptManager:
+    """提示词管理器，负责管理预设和自定义提示词"""
+    
+    DEFAULT_PROMPTS = {
+        "预设1-通用翻译": "你是一名专业的字幕翻译专家。请将字幕翻译成自然流畅的中文，保持语言简洁明了，符合中文表达习惯。注意保持情感色彩和语气的准确性。单位换算：遇到国外单位时在括号内注明换算（如：5英尺(1.5米)、100美元(约700元)）。名词策略：著名人名地名可译中文，生僻的保持原文或音译，日韩文转英文罗马音。",
+        
+        "预设2-影视剧翻译": "你是专业的影视字幕翻译专家。请翻译成符合影视语言特色的中文，保持台词的戏剧性和人物性格特点。对话要自然生动，符合中国观众的观看习惯。单位换算：在括号内标注换算结果增强理解。人名策略：主要角色名可音译，配角或生僻名保持原文，日韩角色名转罗马音拼写。",
+        
+        "预设3-纪录片翻译": "你是专业的纪录片字幕翻译专家。请翻译成严谨准确的中文，保持信息的完整性和客观性。专业术语要翻译准确，叙述要条理清晰。单位换算：科学数据必须准确换算并标注（如：32°F(0°C)、1英里(1.6公里)）。地名人名：国际知名的可译中文，学术或专业领域的保持原文确保准确性。",
+        
+        "预设4-动画片翻译": "你是专业的动画字幕翻译专家。请翻译成活泼有趣的中文，适合各年龄段观众理解。语言要生动可爱，保持动画特有的幽默感和想象力。单位换算：用简单易懂的方式标注（如：10磅(约5公斤)）。角色名：主角可爱译名，配角保持原文或简单音译，确保小朋友也能理解。",
+        
+        "预设5-新闻翻译": "你是专业的新闻字幕翻译专家。请翻译成客观准确的中文，保持新闻的严肃性和时效性。专有名词、地名、人名要翻译准确，表达要简洁明确。单位换算：经济数据和统计信息必须准确换算。人名地名：国际政要和知名城市译中文，其他保持原文确保新闻准确性和国际通用性。",
+        
+        "预设6-教育学术翻译": "你是专业的教育内容字幕翻译专家。请翻译成准确严谨的中文，保持学术用语的专业性。概念要翻译准确，逻辑要清晰，便于学习理解。单位换算：学术数据必须精确换算并标注。专有名词：著名学者可译中文，专业术语、理论名称等保持原文或标准译名，确保学术严谨性。",
+        
+        "预设7-科技程序翻译": "你是专业的科技内容字幕翻译专家。请翻译成准确的中文，保持技术术语的专业性。编程概念、技术名词要翻译准确，或保留英文原文便于理解。单位换算：技术规格要准确换算（如：存储容量、网络速度等）。技术名词：编程语言、框架名称、API等保持英文，公司名、产品名保持原文，人名可简单音译。",
+        
+        "预设8-生活日常翻译": "你是专业的生活内容字幕翻译专家。请翻译成贴近生活的自然中文，保持日常对话的亲切感。用词要通俗易懂，符合日常交流习惯。单位换算：生活中的度量衡要贴心换算（如：烹饪用量、购物重量等）。人名地名：朋友邻居等可音译，商店、餐厅名可保持原文，让观众感受异国生活氛围。"
+    }
+    
+    def __init__(self, config_file: str = "prompts_config.json"):
+        self.config_file = config_file
+        self.prompts = {}
+        self.current_prompt = ""
+        self.load_prompts()
+    
+    def load_prompts(self) -> None:
+        """加载提示词配置"""
+        try:
+            if os.path.exists(self.config_file):
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    # 合并默认提示词和用户自定义提示词
+                    self.prompts = {**self.DEFAULT_PROMPTS, **data.get("custom_prompts", {})}
+                    self.current_prompt = data.get("current_prompt", "")
+                logger.info(f"已加载提示词配置: {len(self.prompts)} 个提示词")
+            else:
+                # 如果配置文件不存在，使用默认提示词
+                self.prompts = self.DEFAULT_PROMPTS.copy()
+                self.current_prompt = ""
+                self.save_prompts()
+                logger.info("创建默认提示词配置文件")
+        except Exception as e:
+            logger.error(f"加载提示词配置出错: {e}")
+            self.prompts = self.DEFAULT_PROMPTS.copy()
+            self.current_prompt = ""
+    
+    def save_prompts(self) -> None:
+        """保存提示词配置"""
+        try:
+            # 分离默认提示词和自定义提示词
+            custom_prompts = {}
+            for name, prompt in self.prompts.items():
+                if name not in self.DEFAULT_PROMPTS or prompt != self.DEFAULT_PROMPTS[name]:
+                    custom_prompts[name] = prompt
+            
+            data = {
+                "custom_prompts": custom_prompts,
+                "current_prompt": self.current_prompt
+            }
+            
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            logger.info(f"已保存提示词配置到: {self.config_file}")
+        except Exception as e:
+            logger.error(f"保存提示词配置出错: {e}")
+    
+    def get_prompts(self) -> Dict[str, str]:
+        """获取所有提示词"""
+        return self.prompts.copy()
+    
+    def get_prompt_names(self) -> List[str]:
+        """获取所有提示词名称列表"""
+        return list(self.prompts.keys())
+    
+    def get_prompt(self, name: str) -> str:
+        """获取指定名称的提示词"""
+        return self.prompts.get(name, "")
+    
+    def set_current_prompt(self, name: str) -> bool:
+        """设置当前使用的提示词"""
+        if name in self.prompts or name == "":
+            self.current_prompt = name
+            self.save_prompts()
+            return True
+        return False
+    
+    def get_current_prompt(self) -> str:
+        """获取当前选中的提示词内容"""
+        if self.current_prompt and self.current_prompt in self.prompts:
+            return self.prompts[self.current_prompt]
+        return ""
+    
+    def get_current_prompt_name(self) -> str:
+        """获取当前选中的提示词名称"""
+        return self.current_prompt
+    
+    def update_prompt(self, name: str, content: str) -> None:
+        """更新提示词内容"""
+        self.prompts[name] = content
+        self.save_prompts()
+    
+    def add_custom_prompt(self, name: str, content: str) -> bool:
+        """添加自定义提示词"""
+        if name not in self.prompts:
+            self.prompts[name] = content
+            self.save_prompts()
+            return True
+        return False
+    
+    def delete_custom_prompt(self, name: str) -> bool:
+        """删除自定义提示词（不能删除预设提示词）"""
+        if name in self.prompts and name not in self.DEFAULT_PROMPTS:
+            del self.prompts[name]
+            if self.current_prompt == name:
+                self.current_prompt = ""
+            self.save_prompts()
+            return True
+        return False
+    
+    def is_default_prompt(self, name: str) -> bool:
+        """判断是否为默认预设提示词"""
+        return name in self.DEFAULT_PROMPTS
+
 class SRTEntry:
     """表示SRT文件中的一个字幕条目"""
     def __init__(self, number: int, start_time: str, end_time: str, content: str):
@@ -195,9 +320,10 @@ class ProgressManager:
 
 class TranslationAPI:
     """翻译API接口"""
-    def __init__(self, api_type: str, api_key: str, model_name: str = None):
+    def __init__(self, api_type: str, api_key: str, model_name: str = None, custom_prompt: str = ""):
         self.api_type = api_type.lower()
         self.api_key = api_key
+        self.custom_prompt = custom_prompt
         
         if self.api_type not in API_ENDPOINTS:
             raise ValueError(f"不支持的API类型: {api_type}。支持的类型: {', '.join(API_ENDPOINTS.keys())}")
@@ -214,6 +340,8 @@ class TranslationAPI:
         self.endpoint = API_ENDPOINTS[self.api_type]
         logger.info(f"使用 {self.api_type} API ({self.model_name or '无指定模型'}) 进行翻译")
         logger.info(f"API端点: {self.endpoint}")
+        if custom_prompt:
+            logger.info(f"使用自定义提示词: {custom_prompt[:50]}...")  # 只显示前50字符
     
     def translate(self, text: str, context: Optional[str] = None) -> str:
         """翻译文本，可选提供上下文"""
@@ -225,16 +353,43 @@ class TranslationAPI:
             "Authorization": f"Bearer {self.api_key}"
         }
         
-        system_message = (
-            "你是专业的字幕翻译专家，负责将字幕从外语翻译成中文。翻译质量要好，要信达雅，阅读起来要流畅。"
-            "请直接提供翻译结果，不要包含任何其他内容。不要添加'翻译如下'、'翻译结果'等前缀。"
-            "不要添加说明、解释或额外的内容，只返回翻译后的文本。"
-            "对于专业术语、人名、地名等要保持一致的翻译。"
-            "如果有可能违反规定的内容，请用适当的替代词替换，而不是拒绝翻译。"
-            "特别重要：请保持原文中的所有分隔符如'===SUBTITLE_SEPARATOR_X==='，不要修改它们。"
-            "这些分隔符用于区分不同的字幕条目，必须在输出中保留。"
-            "每条字幕必须在你的回复中都有对应的翻译，不多也不少。"
-        )
+        # 构建系统消息，如果有自定义提示词则使用，否则使用默认
+        if self.custom_prompt:
+            system_message = (
+                f"{self.custom_prompt} "
+                "请直接提供翻译结果，不要包含任何其他内容。不要添加'翻译如下'、'翻译结果'等前缀。"
+                "不要添加说明、解释或额外的内容，只返回翻译后的文本。"
+                "对于专业术语、人名、地名等要保持一致的翻译。"
+                "如果有可能违反规定的内容，请用适当的替代词替换，而不是拒绝翻译。"
+                "特别重要：请保持原文中的所有分隔符如'===SUBTITLE_SEPARATOR_X==='，不要修改它们。"
+                "这些分隔符用于区分不同的字幕条目，必须在输出中保留。"
+                "每条字幕必须在你的回复中都有对应的翻译，不多也不少。"
+            )
+        else:
+            system_message = (
+                "你是专业的字幕翻译专家，负责将字幕从外语翻译成中文。翻译质量要好，要信达雅，阅读起来要流畅。"
+                "请直接提供翻译结果，不要包含任何其他内容。不要添加'翻译如下'、'翻译结果'等前缀。"
+                "不要添加说明、解释或额外的内容，只返回翻译后的文本。"
+                "对于专业术语、人名、地名等要保持一致的翻译。"
+                "如果有可能违反规定的内容，请用适当的替代词替换，而不是拒绝翻译。"
+                
+                "【单位换算指导】在遇到国外单位时，请在括号内注明换算结果："
+                "• 重量：盎司→克(如：5盎司(142克))、磅→公斤(如：10磅(4.5公斤))"
+                "• 长度：英尺→米(如：6英尺(1.8米))、英寸→厘米(如：12英寸(30厘米))、英里→公里(如：5英里(8公里))"
+                "• 温度：华氏度→摄氏度(如：75°F(24°C))"
+                "• 体积：加仑→升(如：3加仑(11升))、品脱→毫升(如：1品脱(473毫升))"
+                "• 货币：美元/英镑等→人民币概算(如：100美元(约700元)，汇率可能变动)"
+                
+                "【名词翻译策略】对于人名、地名、作品名等专有名词："
+                "• 知名度高的可翻译成中文(如：纽约→纽约，莎士比亚→莎士比亚)"
+                "• 非著名或较生僻的保持原文或音译(如：小地名、人名等)"
+                "• 日文、韩文等小语种名词可转为英文罗马音拼写，便于理解"
+                "• 避免生硬的强制中文翻译，保持国际通用性"
+                
+                "特别重要：请保持原文中的所有分隔符如'===SUBTITLE_SEPARATOR_X==='，不要修改它们。"
+                "这些分隔符用于区分不同的字幕条目，必须在输出中保留。"
+                "每条字幕必须在你的回复中都有对应的翻译，不多也不少。"
+            )
         
         user_message = text
         if context:
@@ -307,8 +462,8 @@ class TranslationAPI:
 
 class SRTTranslator:
     """SRT字幕翻译器"""
-    def __init__(self, api_type: str, api_key: str, batch_size: int = 5, context_size: int = 2, max_workers: int = 1, model_name: str = None):
-        self.translation_api = TranslationAPI(api_type, api_key, model_name)
+    def __init__(self, api_type: str, api_key: str, batch_size: int = 5, context_size: int = 2, max_workers: int = 1, model_name: str = None, custom_prompt: str = ""):
+        self.translation_api = TranslationAPI(api_type, api_key, model_name, custom_prompt)
         self.batch_size = batch_size  # 每批处理的字幕条数
         self.context_size = context_size  # 上下文大小（每侧的条目数）
         self.max_workers = max_workers  # 最大并发工作线程数
@@ -424,18 +579,6 @@ class SRTTranslator:
                     translated_contents.append(translated_combined.strip())
             
             # 备用方法：如果分隔符方法失败，尝试使用默认分隔方法
-            if len(translated_contents) != len(batch_entries):
-                # 尝试简单的分隔 - 用于处理模型可能省略或修改分隔符的情况
-                simple_separator = "===SUBTITLE_SEPARATOR"
-                if simple_separator in translated_combined:
-                    translated_contents = [part.strip() for part in translated_combined.split(simple_separator) if part.strip()]
-                else:
-                    # 最简单的分隔符
-                    simple_separator = "---"
-                    if simple_separator in translated_combined:
-                        translated_contents = [part.strip() for part in translated_combined.split(simple_separator) if part.strip()]
-            
-            # 确保翻译结果的数量与原始条目数量一致
             if len(translated_contents) != len(batch_entries):
                 logger.warning(f"翻译结果数量不匹配: 期望 {len(batch_entries)} 个, 得到 {len(translated_contents)} 个")
                 
@@ -773,6 +916,8 @@ def main():
     parser.add_argument("--start", type=int, help="开始翻译的字幕编号")
     parser.add_argument("--end", type=int, help="结束翻译的字幕编号")
     parser.add_argument("--threads", type=int, default=1, help="并行处理的线程数 (大于1启用多线程)")
+    parser.add_argument("--prompt", help="自定义翻译提示词")
+    parser.add_argument("--prompt-name", help="使用指定名称的预设提示词（如：预设1-通用翻译）")
     
     args = parser.parse_args()
     
@@ -817,7 +962,25 @@ def main():
                 # 将自定义模型设置到DEFAULT_MODELS字典中
                 DEFAULT_MODELS["custom"] = args.model
         
-        translator = SRTTranslator(args.api, args.api_key, args.batch_size, args.context_size, args.threads, args.model)
+        # 处理提示词
+        custom_prompt = ""
+        if args.prompt and args.prompt_name:
+            logger.error("不能同时使用 --prompt 和 --prompt-name 参数")
+            return 1
+        elif args.prompt:
+            custom_prompt = args.prompt
+            logger.info(f"使用自定义提示词: {custom_prompt[:50]}...")
+        elif args.prompt_name:
+            prompt_manager = PromptManager()
+            custom_prompt = prompt_manager.get_prompt(args.prompt_name)
+            if custom_prompt:
+                logger.info(f"使用预设提示词 '{args.prompt_name}': {custom_prompt[:50]}...")
+            else:
+                logger.error(f"未找到名为 '{args.prompt_name}' 的提示词")
+                logger.info(f"可用的提示词: {', '.join(prompt_manager.get_prompt_names())}")
+                return 1
+        
+        translator = SRTTranslator(args.api, args.api_key, args.batch_size, args.context_size, args.threads, args.model, custom_prompt)
         
         translator.translate_srt_file(args.input_file, args.output_file, 
                                       resume=not args.no_resume,

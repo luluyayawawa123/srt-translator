@@ -5,13 +5,15 @@ SRT字幕翻译工具 - 打包脚本
 用于将程序打包为Windows绿色版软件
 
 使用方法：
-python build_exe.py
+python build_exe.py                 # 完整打包
+python build_exe.py --check-only    # 仅检查文件排除设置
 
 依赖：
 pip install pyinstaller
 
 注意：
-- 打包的程序不包含配置和日志文件，这些文件会在运行时自动生成
+- 打包的程序不包含配置和日志文件，这些文件会在运行时自动生成  
+- 自动排除所有包含API密钥等敏感信息的配置文件
 - 打包后的程序是独立的，不需要Python环境即可运行
 """
 
@@ -20,6 +22,7 @@ import sys
 import shutil
 import subprocess
 import json
+import fnmatch
 from pathlib import Path
 
 
@@ -37,26 +40,63 @@ class SRTTranslatorBuilder:
             "srt_translator_gui.py",
             "srt_translator.py", 
             "srt_checker.py",
-            "terminology.json"  # 如果存在的话
+    
         ]
         
         # 不需要包含的文件/目录（会在运行时自动生成）
         self.exclude_patterns = [
+            # 日志文件
             "*.log",
+            
+            # 配置文件（包含敏感信息如API密钥）
             "*config*.json",
+            "prompts_config.json",
+            "srt_translator_gui_config.json",
+            
+            # 进度和临时文件
+            "*_progress*.json",
+            "*_batch*.srt",
+            
+            # Python缓存和构建文件
             "__pycache__",
-            ".git*",
             "*.pyc",
             "*.pyo",
             "*.spec",
             "build/",
             "dist/",
+            
+            # 版本控制
+            ".git*",
+            ".gitignore",
+            
+            # 虚拟环境
             ".venv/",
             "venv/",
             "env/",
+            
+            # 开发和测试文件
             "test_*",
             "*.md",
-            "*.txt"
+            "requirements.txt",
+            
+            # IDE和编辑器文件
+            ".vscode/",
+            ".idea/",
+            "*.swp",
+            "*.swo",
+            "*~",
+            
+            # 操作系统文件
+            ".DS_Store",
+            "Thumbs.db",
+            
+            # 项目特定目录
+            "SRT翻译工具/",
+            ".历史文件备份（请忽略）/",
+            
+            # 用户数据文件（运行时生成）
+            "*.sqlite",
+            "*.db"
         ]
     
     def check_dependencies(self):
@@ -99,11 +139,8 @@ class SRTTranslatorBuilder:
             if file_path.exists():
                 print(f"✅ {file_name}")
             else:
-                if file_name == "terminology.json":
-                    print(f"⚠️  {file_name} (可选文件，不存在)")
-                else:
-                    missing_files.append(file_name)
-                    print(f"❌ {file_name}")
+                missing_files.append(file_name)
+                print(f"❌ {file_name}")
         
         if missing_files:
             print(f"\n❌ 缺少必要文件: {missing_files}")
@@ -141,7 +178,7 @@ a = Analysis(
     datas=[
         ('srt_translator.py', '.'),
         ('srt_checker.py', '.'),
-    ] + ([('terminology.json', '.')] if os.path.exists('terminology.json') else []),
+    ],
     hiddenimports=[
         'customtkinter',
         'tkinter',
@@ -324,7 +361,7 @@ coll = COLLECT(
 配置文件：
 - 程序首次运行时会自动创建配置文件（在软件目录内）
 - 配置会自动保存，下次启动时自动加载
-- 术语库文件支持自定义翻译对照
+- 提示词设置支持个性化定制
 
 系统要求：
 - Windows 7/8/10/11 (32位/64位)
@@ -341,27 +378,7 @@ coll = COLLECT(
             f.write(readme_content)
         print(f"✅ 已创建使用说明: {readme_file.name}")
         
-        # 创建默认术语库文件（如果不存在）
-        terminology_source = self.script_dir / "terminology.json"
-        terminology_target = self.output_dir / "terminology.json"
-        
-        if terminology_source.exists():
-            shutil.copy2(terminology_source, terminology_target)
-            print(f"✅ 已复制术语库文件: {terminology_target.name}")
-        else:
-            # 创建默认的空术语库
-            default_terminology = {
-                "translation_pairs": [
-                    {
-                        "source": "示例原文",
-                        "target": "示例译文",
-                        "note": "这是一个示例条目，您可以添加自己的术语对照"
-                    }
-                ]
-            }
-            with open(terminology_target, 'w', encoding='utf-8') as f:
-                json.dump(default_terminology, f, ensure_ascii=False, indent=2)
-            print(f"✅ 已创建默认术语库: {terminology_target.name}")
+
         
         return True
     
@@ -404,6 +421,58 @@ coll = COLLECT(
         else:
             return f"{total_size / (1024 * 1024):.1f} MB"
     
+    def check_exclusions(self):
+        """检查并显示会被排除的文件"""
+        print("\n🔍 检查文件排除设置...")
+        
+        all_files = []
+        excluded_files = []
+        
+        # 遍历当前目录下的所有文件
+        for item in self.script_dir.rglob("*"):
+            if item.is_file():
+                relative_path = item.relative_to(self.script_dir)
+                all_files.append(str(relative_path))
+                
+                # 检查是否匹配排除模式
+                should_exclude = False
+                for pattern in self.exclude_patterns:
+                    if fnmatch.fnmatch(str(relative_path), pattern) or fnmatch.fnmatch(item.name, pattern):
+                        should_exclude = True
+                        excluded_files.append((str(relative_path), pattern))
+                        break
+        
+        print(f"📂 总文件数: {len(all_files)}")
+        print(f"🚫 排除文件数: {len(excluded_files)}")
+        
+        if excluded_files:
+            print("\n📋 被排除的文件:")
+            config_files = []
+            other_files = []
+            
+            for file_path, pattern in excluded_files:
+                if 'config' in file_path.lower() or 'progress' in file_path.lower() or file_path.endswith('.log'):
+                    config_files.append(f"   🔒 {file_path} (匹配: {pattern})")
+                else:
+                    other_files.append(f"   📄 {file_path} (匹配: {pattern})")
+            
+            if config_files:
+                print("   🔐 敏感配置文件 (包含API密钥等):")
+                for item in config_files[:10]:  # 最多显示10个
+                    print(item)
+                if len(config_files) > 10:
+                    print(f"      ... 还有 {len(config_files) - 10} 个配置文件")
+            
+            if other_files:
+                print("   📁 其他开发文件:")
+                for item in other_files[:5]:  # 最多显示5个
+                    print(item)
+                if len(other_files) > 5:
+                    print(f"      ... 还有 {len(other_files) - 5} 个其他文件")
+        
+        print("\n✅ 排除设置检查完成！")
+        return True
+    
     def build(self):
         """执行完整的打包流程"""
         print("🚀 SRT字幕翻译工具 - 开始打包")
@@ -415,6 +484,10 @@ coll = COLLECT(
         
         # 检查源文件
         if not self.check_source_files():
+            return False
+        
+        # 检查文件排除设置
+        if not self.check_exclusions():
             return False
         
         # 清理之前的构建
@@ -454,6 +527,15 @@ coll = COLLECT(
 def main():
     """主函数"""
     builder = SRTTranslatorBuilder()
+    
+    # 检查命令行参数
+    if len(sys.argv) > 1 and sys.argv[1] == "--check-only":
+        print("🔍 仅检查文件排除设置...")
+        print("=" * 50)
+        builder.check_exclusions()
+        print("\n按任意键退出...")
+        input()
+        return
     
     try:
         success = builder.build()
