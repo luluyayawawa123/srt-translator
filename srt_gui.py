@@ -422,7 +422,7 @@ def truncate_text(text, max_length=10):
 class SRTGuiApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("SRT 字幕翻译工具 v2.8")
+        self.root.title("SRT 字幕翻译工具 v2.8.1")
         self.root.geometry("1400x900")  # 进一步增大默认尺寸确保所有按钮显示
         self.root.minsize(1000, 750)  # 增大最小窗口大小
         
@@ -1871,17 +1871,17 @@ class SRTGuiApp:
         rb_balanced.pack(anchor=tk.W)
         ToolTip(rb_balanced, "平衡模式：约5.5字/秒，适合大多数中文视频，兼顾语速与阅读体验")
 
-        rb_new = ttk.Radiobutton(policy_frame, text="新·中文语速最佳实践（推荐）", value="cn_balanced_new", variable=self.polisher_length_policy_var)
+        rb_new = ttk.Radiobutton(policy_frame, text="新·中文语速最佳实践", value="cn_balanced_new", variable=self.polisher_length_policy_var)
         rb_new.pack(anchor=tk.W)
-        ToolTip(rb_new, "推荐模式：结合了“无”的高质量润色与“平衡”的科学语速控制，且不强制TTS读音")
+        ToolTip(rb_new, '结合了"无"的高质量润色与"平衡"的科学语速控制，且不强制TTS读音')
 
         rb_exp = ttk.Radiobutton(policy_frame, text="最新中文语速方案（实验）", value="cn_speed_experimental", variable=self.polisher_length_policy_var)
         rb_exp.pack(anchor=tk.W)
         ToolTip(rb_exp, "实验模式：基于最佳实践方案，但移除强制的数字逐位读法（如保留'2023'而非'二零二三'），适合特定配音需求")
 
-        rb_exp2 = ttk.Radiobutton(policy_frame, text="最新中文语速方案（实验2）", value="cn_speed_experimental_2", variable=self.polisher_length_policy_var)
+        rb_exp2 = ttk.Radiobutton(policy_frame, text="最新中文语速方案（实验2）（推荐）", value="cn_speed_experimental_2", variable=self.polisher_length_policy_var)
         rb_exp2.pack(anchor=tk.W)
-        ToolTip(rb_exp2, "实验2模式：最高优先级保护“原汁原味”的语言风格，严禁将“回血”等俚语正规化，基于实验模式。")
+        ToolTip(rb_exp2, '【推荐】最高优先级保护"原汁原味"的语言风格，严禁将"回血"等俚语正规化，基于实验模式。综合表现最佳，推荐优先使用。')
 
         rb_none = ttk.Radiobutton(policy_frame, text="无（不限制字数）", value="none", variable=self.polisher_length_policy_var)
         rb_none.pack(anchor=tk.W)

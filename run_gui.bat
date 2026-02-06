@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 echo ========================================
-echo     SRT Translation Tool Launcher v2.8
+echo     SRT Translation Tool Launcher
 echo ========================================
 echo Checking system environment...
 echo.

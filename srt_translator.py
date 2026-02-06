@@ -250,7 +250,10 @@ class TranslationAPI:
         
         user_message = text
         if context:
-            user_message = f"上下文信息：{context}\n\n要翻译的内容：{text}\n\n请直接提供翻译结果，不要添加任何前缀或说明，保持所有原始的分隔标记。"
+            if system_message_override:
+                user_message = f"上下文信息：{context}\n\n需要处理的内容：{text}"
+            else:
+                user_message = f"上下文信息：{context}\n\n要翻译的内容：{text}\n\n请直接提供翻译结果，不要添加任何前缀或说明，保持所有原始的分隔标记。"
         
         payload = {
             "model": self.model_name,

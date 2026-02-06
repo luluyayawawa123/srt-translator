@@ -1,21 +1,51 @@
 {
   "api_configs": {
+    "Gemini官方-小号": {
+      "api_endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      "api_key": "AIzaSyA4iwxQ7TsDyugoTE8D6n49g0c73gc76C8",
+      "model": "models/gemini-2.5-pro"
+    },
+    "Gemini官方-大号": {
+      "api_endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      "api_key": "AIzaSyAUDo2ukB3AGKULT7qe7_Ly9ESBm2JA9Ao",
+      "model": "gemini-3-pro-preview"
+    },
     "DS官方": {
       "api_endpoint": "https://api.deepseek.com/v1/chat/completions",
-      "api_key": "111",
+      "api_key": "sk-67450155ec954b4c80c77c6d80993c5f",
       "model": "deepseek-chat"
     },
     "DS-百炼": {
       "api_endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-      "api_key": "111",
+      "api_key": "sk-d791f757fb6c46559520a238848de2be",
       "model": "deepseek-v3.2-exp"
+    },
+    "Gemini官方-小号-gemini-3-flash-preview": {
+      "api_endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      "api_key": "AIzaSyA4iwxQ7TsDyugoTE8D6n49g0c73gc76C8",
+      "model": "gemini-3-flash-preview"
+    },
+    "DS官方-r1": {
+      "api_endpoint": "https://api.deepseek.com/v1/chat/completions",
+      "api_key": "sk-67450155ec954b4c80c77c6d80993c5f",
+      "model": "deepseek-reasoner"
+    },
+    "Gemini官方-小小号-chunhua099": {
+      "api_endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      "api_key": "AIzaSyC9OHhrnm68C0R1oszpCb9T-bAiZTq9aGU",
+      "model": "gemini-3-flash-preview"
+    },
+    "Gemini官方-小小号-chunhua099-pro": {
+      "api_endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      "api_key": "AIzaSyC9OHhrnm68C0R1oszpCb9T-bAiZTq9aGU",
+      "model": "gemini-3-pro-preview"
     }
   },
-  "current_api_config": "DS官方",
+  "current_api_config": "Gemini官方-小小号-chunhua099",
   "api_details_visible": true,
-  "api_endpoint": "https://api.deepseek.com/v1/chat/completions",
-  "api_key": "111",
-  "model": "deepseek-chat",
+  "api_endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+  "api_key": "AIzaSyC9OHhrnm68C0R1oszpCb9T-bAiZTq9aGU",
+  "model": "gemini-3-flash-preview",
   "batch_size": "30",
   "context_size": "5",
   "threads": "20",
@@ -26,7 +56,7 @@
   "professional_mode": false,
   "presets": {
     "1": {
-      "name": "跑步与跑鞋评测",
+      "name": "跑步1",
       "content": "该字幕内容为跑步相关。\n请使用更加口语化、生活化的翻译风格，避免过于正式的书面语，可以适当使用赛博发疯风格的幽默。对于著名的人名、地名、作品名等，可以翻译为中文，但是冷门的则不必强行翻译。日韩文的生冷人名、地名等，直接翻译为英文罗马音即可。\n\n对于比赛时间和跑步配速，翻译为“430”和“245”这种形式即可，而不是“4:30”或“2:45”。\n\nSockney Endorphin Speed 5 应该翻译为“索康尼啡速5”，Endorphin Pro 5 则是啡鹏5，Endorphin Elite则是啡翼，Triumph则是索康尼胜利，Ride则是驭途，Endorphin Azura不翻译，其他地方请灵活变通。\nBrooks Glycerin 23 应该翻译为“布鲁克斯甘油23”，其他地方灵活变通。"
     },
     "2": {
@@ -62,8 +92,8 @@
       "content": "翻译医学健康类内容时保持专业准确。医学术语使用标准中文表达。药物名称、疾病名称使用通用译名。涉及健康建议时保持严谨客观的表述。"
     },
     "10": {
-      "name": "美食烹饪",
-      "content": "翻译美食烹饪类内容时保持生动诱人的表达。食材名称使用中文常见名称。烹饪方法和步骤要清晰易懂。保持美食内容的诱人和温馨感。"
+      "name": "数毛社-带粗纠错",
+      "content": "翻译内容为主机游戏新闻和主机游戏评测的视频访谈节目。请使用更加口语化的翻译风格，可以适当使用赛博发疯风格的幽默，避免过于正式的书面语。\n\n需注意，字幕为whisper软件转录，可能有听错的单词，比如“DF Direct Weekly”可能被听错为别的；“switch 2”可能听错为“switch too”。你要自行识别并正确翻译。"
     }
   },
   "corrector_presets": {
@@ -116,7 +146,7 @@
       "smart_punctuation": true,
       "fluency_optimization": false
     },
-    "user_prompt": "字幕内容为跑步装备、跑鞋评测领域。\n\n原字幕是whisper软件识别的，会听错一些读音相近的单词。只修改发音相近的，再次强调，只修改发音相近的！不要以你有限的知识去轻易修改这类名词，比如switch 2、Gamescom 2025等明显是是正确的，因为是后期新发售的机型或新举办的新展会活动。还有，原字幕中明明说的是 Switch ，那么你就不要添油加醋地纠正成 Switch 2。比如，原字幕中明明说的是 FF Leap ，那么你就不要纠错为FF Blast，他们的发音完全不一样，软件只会听错发音相近的词。再如，原字幕中明明说的是 FF Leap 和 Pro Evo 2，那么你就不要纠错为FF Blast 和 Pro Evo 1其他类似情况请灵活变通。\n\n再举几个例子。ASICS被识别成了A6；ASICS GT-2000 14 被识别成了 ASICS GT 2014；Gel Kayano 也经常被听错。其他常见跑鞋品牌以及跑鞋型号的错别词注意识别。\n\n诸如 Sub 20 5K （5公里跑进20分钟）经常会被听错为 Sub 25K，其他类似的情况也需要通过上下文仔细判断。\n\n比赛时间和跑步配速一般都会简写成430、345这样的，你不需要纠正为4:30或3:45。\n\n不要改变句子中单词的顺序，也不要改变语法。\n\n该视频标题与内容介绍：\nBrooks Ghost 18 First Look | A Classic Training Workhorse For Any Runner!\nThe Brooks Ghost 18 is returning in 2026 and continues to deliver reliable comfort for all of your daily training. With a balanced underfoot feel and a slightly refined fit, the Brooks Ghost 18 has everything you need for racking up the miles!"
+    "user_prompt": "字幕内容为主机游戏领域，涉及到PC硬件、游戏图形技术、计算机等领域。以Digital Foundry的节目内容为主。\n\n原字幕是whisper软件识别的，会听错一些读音相近的单词。只修改发音相近的，再次强调，只修改发音相近的！不要以你有限的知识去轻易修改这类名词，比如switch 2、Gamescom 2025等明显是是正确的，因为是后期新发售的机型或新举办的新展会活动。还有，原字幕中明明说的是 Switch ，那么你就不要添油加醋地纠正成 Switch 2。他们的发音完全不一样，软件只会听错读音相近的词。其他类似情况请灵活变通。\n\n不要改变句子中单词的顺序，也不要改变语法。\n\n该视频标题与内容介绍：\nDLSS 4.5 Preset L Review: Nvidia's Most Advanced Upscaler Tested At 4K And 1440p\nDigital Foundry tests DLSS 4.5's \"Preset L,\" comparing image quality to \"Preset M\" at 4K and 1440p. This in-depth analysis examines performance on various RTX GPUs, including older models. Unexpected discoveries about ray tracing and denoiser interaction are revealed.\nWe've already looked at DLSS 4.5 \"Preset M\", designed for 4K performance mode upscaling - but what about the more demanding \"Preset L\". This one's even more computationally expensive and best used on 40-series and 50-series GPUs. It's also meant for 3x3 upscaling - 4K from a base 720p, effectively. Alex takes a look at how Preset L compares to Preset M and older DLSS versions, then takes a look at 1440p performance - can upscaling from a base 480p to 1440p benefit older RTX graphics cards?"
   },
   "polisher": {
     "batch_size": "30",
